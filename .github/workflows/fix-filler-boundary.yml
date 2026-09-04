@@ -1,0 +1,46 @@
+name: Fix habit word boundaries
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-filler-boundary.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch habit word detection
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          old = '''new RegExp("어" === t || "음" === t ? `${t}+` : t, "g"),'''
+          new = '''new RegExp(
+                      "어" === t || "음" === t
+                        ? `(?<![가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9])${t}+(?![가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9])`
+                        : t,
+                      "g",
+                    ),'''
+          if old not in text:
+              raise SystemExit('Target habit-word matcher was not found; no file changed.')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit fix
+        shell: bash
+        run: |
+          if git diff --quiet -- index.html; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'fix: avoid false habit-word matches in Korean words'
+          git push
