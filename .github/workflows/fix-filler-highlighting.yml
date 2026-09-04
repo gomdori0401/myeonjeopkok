@@ -1,0 +1,59 @@
+name: Fix habit word highlighting
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-filler-highlighting.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch filler detection and highlighting
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          old_count = '''"어" === t || "음" === t
+              ? `(?<![가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9])${t}+(?![가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9])`
+              : t,'''
+          new_count = '''"어" === t || "음" === t
+              ? `(?<![가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9])${t}+(?![가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9])`
+              : `(?<![가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9])${t}(?![가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9])`,'''
+
+          old_highlight = '''a(n).replace(/어+|음+|약간|뭔가|그냥/g, '<span class="filler-hit" title="습관어">$&</span>')'''
+          new_highlight = '''a(n).replace(/(?<![가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9])(?:어+|음+|약간|뭔가|그냥)(?![가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9])/g, '<span class="filler-hit" title="습관어">$&</span>')'''
+
+          changed = False
+          if old_count in text:
+              text = text.replace(old_count, new_count, 1)
+              changed = True
+          if old_highlight in text:
+              text = text.replace(old_highlight, new_highlight, 1)
+              changed = True
+
+          if not changed:
+              raise SystemExit('No matching filler logic found; no file changed.')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit fix
+        shell: bash
+        run: |
+          if git diff --quiet -- index.html; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'fix: avoid highlighting normal Korean word endings as fillers'
+          git push
