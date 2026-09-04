@@ -637,7 +637,7 @@
                       l.length
                         ? l
                             .map((e, t) => {
-                              return `<div class="review-card"><b>질문 ${t + 1}</b><div class="quote">${a(e.question)}</div><b>나의 답변</b><div class="suggest">${((n = e.answer), a(n).replace(/어+|음+|약간|뭔가|그냥/g, '<span class="filler-hit" title="습관어">$&</span>'))}</div><div class="muted" style="margin-top:8px"><b>감지된 습관어:</b> ${S(e.answer)} · 총 ${e.fillers}회 · ${e.answer.length}자</div></div>`;
+                              return `<div class="review-card"><b>질문 ${t + 1}</b><div class="quote">${a(e.question)}</div><b>나의 답변</b><div class="suggest">${((n = e.answer), a(n).replace(/(?<![가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9])(?:어+|음+|약간|뭔가|그냥)(?![가-힣ㄱ-ㅎㅏ-ㅣA-Za-z0-9])/g, '<span class="filler-hit" title="습관어">$&</span>'))}</div><div class="muted" style="margin-top:8px"><b>감지된 습관어:</b> ${S(e.answer)} · 총 ${e.fillers}회 · ${e.answer.length}자</div></div>`;
                               var n;
                             })
                             .join("")
