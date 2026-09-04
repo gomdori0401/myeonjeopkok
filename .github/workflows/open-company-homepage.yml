@@ -18,43 +18,39 @@ jobs:
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
 
-          old_handler = '''t("[data-company]").forEach(
-              (a) =>
-                (a.onclick = () => {
-                  const t = v().find((e) => e.id == a.dataset.company);
-                  t &&
-                    ((e("#company").value = t.name || ""),
-                    (e("#role").value = t.role || ""),
-                    (e("#field").value = t.field || ""),
-                    c(),
-                    r("profile"));
-                }),
-            ));'''
+          old_card = '''`<div class="company-card"><div class="topline"><div><div class="name">${e.name}</div><div class="role">${e.role}</div></div><button class="star ${e.fav ? "on" : ""}" data-fav="${e.id}">★</button></div><div class="summary">${u(e.name, e.role, e.field || "")}</div><div class="muted" style="margin-top:6px">저장 ${e.date}</div></div>`,'''
+          new_card = '''`<div class="company-card" data-company-home="${e.id}" style="cursor:pointer"><div class="topline"><div><div class="name">${e.name}</div><div class="role">${e.role}</div></div><button class="star ${e.fav ? "on" : ""}" data-fav="${e.id}">★</button></div><div class="summary">${u(e.name, e.role, e.field || "")}</div><div class="muted" style="margin-top:6px">저장 ${e.date}</div></div>`,'''
+          if old_card not in s:
+              raise SystemExit('saved company card template not found')
+          s = s.replace(old_card, new_card, 1)
 
-          new_handler = '''t("[data-company]").forEach(
-              (a) =>
-                (a.onclick = () => {
-                  const t = v().find((e) => e.id == a.dataset.company);
-                  if (!t) return;
-                  const n = String(t.name || "").trim();
-                  const i = {
-                    "한화이글스": "https://www.hanwhaeagles.co.kr/",
-                    "한화 이글스": "https://www.hanwhaeagles.co.kr/",
-                    "영남대학교": "https://www.yu.ac.kr/",
-                    "영남대": "https://www.yu.ac.kr/",
-                    "국립공주대학교": "https://www.kongju.ac.kr/",
-                    "공주대학교": "https://www.kongju.ac.kr/",
-                    "공주대": "https://www.kongju.ac.kr/",
-                    "삼성전자": "https://www.samsung.com/sec/"
-                  };
-                  const l = i[n] || `https://www.google.com/search?q=${encodeURIComponent(n + " 공식 홈페이지")}`;
-                  window.open(l, "_blank", "noopener,noreferrer");
-                }),
-            ));'''
-
-          if old_handler not in s:
-              raise SystemExit('company card click handler not found')
-          p.write_text(s.replace(old_handler, new_handler, 1), encoding='utf-8')
+          marker = '''          (e("#loginBtn").onclick = () => {'''
+          handler = '''          document.addEventListener("click", (event) => {
+            const fav = event.target.closest("[data-fav]");
+            if (fav) return;
+            const card = event.target.closest("[data-company-home]");
+            if (!card) return;
+            const item = v().find((x) => x.id == card.dataset.companyHome);
+            if (!item) return;
+            const name = String(item.name || "").trim();
+            const known = {
+              "한화이글스": "https://www.hanwhaeagles.co.kr/",
+              "한화 이글스": "https://www.hanwhaeagles.co.kr/",
+              "영남대학교": "https://www.yu.ac.kr/",
+              "영남대": "https://www.yu.ac.kr/",
+              "국립공주대학교": "https://www.kongju.ac.kr/",
+              "공주대학교": "https://www.kongju.ac.kr/",
+              "공주대": "https://www.kongju.ac.kr/",
+              "삼성전자": "https://www.samsung.com/sec/"
+            };
+            const url = known[name] || `https://www.google.com/search?q=${encodeURIComponent(name + " 공식 홈페이지")}`;
+            window.open(url, "_blank");
+          });
+          (e("#loginBtn").onclick = () => {'''
+          if marker not in s:
+              raise SystemExit('login marker not found')
+          s = s.replace(marker, handler, 1)
+          p.write_text(s, encoding='utf-8')
           PY
       - name: Commit
         shell: bash
@@ -63,5 +59,5 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m 'feat: open company or school homepage from saved card'
+          git commit -m 'fix: make saved company cards open homepage'
           git push
