@@ -1,0 +1,67 @@
+name: Open saved company homepage
+on:
+  push:
+    paths:
+      - '.github/workflows/open-company-homepage.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch company card click behavior
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old_handler = '''t("[data-company]").forEach(
+              (a) =>
+                (a.onclick = () => {
+                  const t = v().find((e) => e.id == a.dataset.company);
+                  t &&
+                    ((e("#company").value = t.name || ""),
+                    (e("#role").value = t.role || ""),
+                    (e("#field").value = t.field || ""),
+                    c(),
+                    r("profile"));
+                }),
+            ));'''
+
+          new_handler = '''t("[data-company]").forEach(
+              (a) =>
+                (a.onclick = () => {
+                  const t = v().find((e) => e.id == a.dataset.company);
+                  if (!t) return;
+                  const n = String(t.name || "").trim();
+                  const i = {
+                    "한화이글스": "https://www.hanwhaeagles.co.kr/",
+                    "한화 이글스": "https://www.hanwhaeagles.co.kr/",
+                    "영남대학교": "https://www.yu.ac.kr/",
+                    "영남대": "https://www.yu.ac.kr/",
+                    "국립공주대학교": "https://www.kongju.ac.kr/",
+                    "공주대학교": "https://www.kongju.ac.kr/",
+                    "공주대": "https://www.kongju.ac.kr/",
+                    "삼성전자": "https://www.samsung.com/sec/"
+                  };
+                  const l = i[n] || `https://www.google.com/search?q=${encodeURIComponent(n + " 공식 홈페이지")}`;
+                  window.open(l, "_blank", "noopener,noreferrer");
+                }),
+            ));'''
+
+          if old_handler not in s:
+              raise SystemExit('company card click handler not found')
+          p.write_text(s.replace(old_handler, new_handler, 1), encoding='utf-8')
+          PY
+      - name: Commit
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'feat: open company or school homepage from saved card'
+          git push
