@@ -1,0 +1,44 @@
+name: Enter next and Alt Enter newline
+
+on:
+  push:
+    paths:
+      - '.github/workflows/enter-next-alt-enter-newline.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add answer keyboard shortcuts
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          marker = '''        ((e("#answer").oninput = (t) => {'''
+          replacement = '''        (e("#answer").onkeydown = (t) => {
+          if ("Enter" !== t.key || t.isComposing) return;
+          if (t.altKey) return;
+          t.preventDefault();
+          const n = e("#answer").value.trim();
+          n && e("#submit").click();
+        }),
+        ((e("#answer").oninput = (t) => {'''
+          if marker not in text:
+              raise SystemExit('Answer input marker not found.')
+          path.write_text(text.replace(marker, replacement, 1), encoding='utf-8')
+          PY
+      - name: Commit change
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'feat: Enter next and Alt Enter newline'
+          git push
