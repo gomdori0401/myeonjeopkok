@@ -221,7 +221,7 @@
             ? n
                 .map(
                   (e) =>
-                    `<div class="company-card"><div class="topline"><div><div class="name">${e.name}</div><div class="role">${e.role}</div></div><button class="star ${e.fav ? "on" : ""}" data-fav="${e.id}">★</button></div><div class="summary">${u(e.name, e.role, e.field || "")}</div><div class="muted" style="margin-top:6px">저장 ${e.date}</div></div>`,
+                    `<div class="company-card" data-company-home="${e.id}" style="cursor:pointer"><div class="topline"><div><div class="name">${e.name}</div><div class="role">${e.role}</div></div><button class="star ${e.fav ? "on" : ""}" data-fav="${e.id}">★</button></div><div class="summary">${u(e.name, e.role, e.field || "")}</div><div class="muted" style="margin-top:6px">저장 ${e.date}</div></div>`,
                 )
                 .join("")
             : '<div class="muted">저장된 기업이 없어요.</div>'),
@@ -792,7 +792,28 @@
                     "records" === a ? "block" : "none"));
               }),
           ),
-          (e("#loginBtn").onclick = () => {
+          document.addEventListener("click", (event) => {
+  const fav = event.target.closest("[data-fav]");
+  if (fav) return;
+  const card = event.target.closest("[data-company-home]");
+  if (!card) return;
+  const item = v().find((x) => x.id == card.dataset.companyHome);
+  if (!item) return;
+  const name = String(item.name || "").trim();
+  const known = {
+    "한화이글스": "https://www.hanwhaeagles.co.kr/",
+    "한화 이글스": "https://www.hanwhaeagles.co.kr/",
+    "영남대학교": "https://www.yu.ac.kr/",
+    "영남대": "https://www.yu.ac.kr/",
+    "국립공주대학교": "https://www.kongju.ac.kr/",
+    "공주대학교": "https://www.kongju.ac.kr/",
+    "공주대": "https://www.kongju.ac.kr/",
+    "삼성전자": "https://www.samsung.com/sec/"
+  };
+  const url = known[name] || `https://www.google.com/search?q=${encodeURIComponent(name + " 공식 홈페이지")}`;
+  window.open(url, "_blank");
+});
+(e("#loginBtn").onclick = () => {
             let t = e("#lname").value.trim(),
               n = e("#lemail").value.trim();
             if (!t || !n.includes("@"))
