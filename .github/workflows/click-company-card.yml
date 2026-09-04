@@ -1,0 +1,67 @@
+name: Click saved company cards
+on:
+  push:
+    paths:
+      - '.github/workflows/click-company-card.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch company cards
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = '''`<div class="company-card"><div class="topline"><div><div class="name">${e.name}</div><div class="role">${e.role}</div></div><button class="star ${e.fav ? "on" : ""}" data-fav="${e.id}">★</button></div><div class="summary">${u(e.name, e.role, e.field || "")}</div><div class="muted" style="margin-top:6px">저장 ${e.date}</div></div>`,'''
+          new = '''`<div class="company-card" data-company="${e.id}" style="cursor:pointer"><div class="topline"><div><div class="name">${e.name}</div><div class="role">${e.role}</div></div><button class="star ${e.fav ? "on" : ""}" data-fav="${e.id}">★</button></div><div class="summary">${u(e.name, e.role, e.field || "")}</div><div class="muted" style="margin-top:6px">저장 ${e.date}</div></div>`,'''
+          if old not in s:
+              raise SystemExit('company card template not found')
+          s = s.replace(old, new, 1)
+          old2 = '''(e.onclick = () => {
+                  let t = v(),
+                    n = t.find((t) => t.id == e.dataset.fav);'''
+          new2 = '''(e.onclick = (a) => {
+                  a.stopPropagation();
+                  let t = v(),
+                    n = t.find((t) => t.id == e.dataset.fav);'''
+          if old2 not in s:
+              raise SystemExit('favorite handler not found')
+          s = s.replace(old2, new2, 1)
+          old3 = '''                    x());
+                }),
+            ));
+        }
+        function f() {'''
+          new3 = '''                    x());
+                }),
+            ),
+            t("[data-company]").forEach(
+              (a) =>
+                (a.onclick = () => {
+                  const t = v().find((e) => e.id == a.dataset.company);
+                  t &&
+                    ((e("#company").value = t.name || ""),
+                    (e("#role").value = t.role || ""),
+                    (e("#field").value = t.field || ""),
+                    c(),
+                    r("profile"));
+                }),
+            ));
+        }
+        function f() {'''
+          if old3 not in s:
+              raise SystemExit('company handler insertion point not found')
+          s = s.replace(old3, new3, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add index.html
+          git commit -m 'feat: open saved company card in profile' || exit 0
+          git push
